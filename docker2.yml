@@ -1,0 +1,102 @@
+- hosts : all
+  vars_prompt :
+          - name :  cont_name
+            private : no
+            prompt : "ENTER DOCKER CONTAINER NAME:"
+
+          - name : dir
+            private : no
+            prompt : "ENTER DIRECTORY NAME:"
+
+  tasks :
+          - name : "CREATING DIRECTORY 1"
+            file : 
+                  path : "/dvd"
+                  state : directory
+
+          - name : "CREATING DIRECTORY 2"
+            file :
+                  path : "/{{ dir }}"
+                  state : directory
+
+          - name : "MOUNTING DIRECTORY WITH CD-ROM"
+            mount :
+                  src : "/dev/sr0"
+                  state : mounted
+                  path : "/dvd"
+                  fstype : "iso9660"
+          
+ 
+          - name : "YUM REPO (Docker)"
+            yum_repository:
+                  name: docker
+                  description: DOCKER YUM repo
+                  file: docker_repo
+                  baseurl: https://download.docker.com/linux/centos/7/$basearch/stable
+                  enabled: 1
+                  gpgcheck: 1
+                  gpgkey: https://download.docker.com/linux/centos/gpg
+ 
+                  
+
+          - name : "YUM REPO (AppStream)"
+            yum_repository :
+                  baseurl : "/dvd/AppStream"
+                  gpgcheck : no
+                  name : "yumrepo1"
+                  description : "my yum repository dvd1"
+
+          - name : "YUM REPO (BaseOS)"
+            yum_repository :
+                  baseurl : "/dvd/BaseOS"
+                  gpgcheck : no
+                  name : "yumrepo2"
+                  description : "my yum repository dvd2"
+
+
+          - name : "INSTALLING DOCKER"  
+            command : yum install docker-ce  --nobest -y
+                
+          - name : "INSTALLING PYTHON3"
+            package :
+                  name : "python3"
+                  state : present
+
+          - pip : 
+                  name : "docker-py"
+
+          - pip :
+                  name : "urllib3"
+                  state : absent
+
+          - pip : 
+                  name : "urllib3"
+                  state : present
+
+          - service :
+                  name : "docker"
+                  state : restarted
+                  enabled : yes
+                  
+
+          - name : "PULLING IMAGE FROM DOCKER HUB"
+            community.general.docker_image : 
+                  name : "httpd"
+                      
+         
+
+          - name : "CREATING DOCKER CONTAINER"
+            community.general.docker_container :
+                  name : "{{ cont_name }}"
+                  image : "httpd"
+                  ports :
+                          - "8081:80"
+                  volumes: 
+                          - "/{{ dir }}:/usr/local/apache2/htdocs"
+
+          - name : "TRANSFERRING INDEX.HTML FILE TO HOST" 
+            copy :
+                  src : "/root/index.html"
+                  dest : "/{{ dir }}"
+
+
